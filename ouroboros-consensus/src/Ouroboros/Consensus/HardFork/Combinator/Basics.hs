@@ -7,12 +7,15 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE KindSignatures             #-}
 {-# LANGUAGE LambdaCase                 #-}
+{-# LANGUAGE MultiParamTypeClasses      #-}
+{-# LANGUAGE OverloadedStrings          #-}
 {-# LANGUAGE RecordWildCards            #-}
 {-# LANGUAGE ScopedTypeVariables        #-}
 {-# LANGUAGE StandaloneDeriving         #-}
 {-# LANGUAGE TypeApplications           #-}
 {-# LANGUAGE TypeFamilies               #-}
 {-# LANGUAGE TypeOperators              #-}
+{-# LANGUAGE UndecidableInstances       #-}
 
 module Ouroboros.Consensus.HardFork.Combinator.Basics (
     -- * Hard fork protocol, block, and ledger state
@@ -163,6 +166,9 @@ data HardForkLedgerConfig xs = HardForkLedgerConfig {
 instance CanHardFork xs => NoThunks (HardForkLedgerConfig xs)
 
 type instance LedgerCfg (LedgerState (HardForkBlock xs)) = HardForkLedgerConfig xs
+
+instance (CanHardFork xs, UpdateLedger (HardForkBlock xs))
+  => HasPartialLedgerConfig (HardForkBlock xs) where
 
 {-------------------------------------------------------------------------------
   Operations on config
