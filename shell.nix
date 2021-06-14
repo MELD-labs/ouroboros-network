@@ -19,7 +19,7 @@ let
   #
   # > tools = {
   # >   ...
-  # >   haskell-language-server = "1.1.0";
+  # >   haskell-language-server = "1.2.0.0";
   # >   stylish-haskell = "0.12.3.0";
   #
   # Note that the tools attribute comes from haskell-nix when defining the
@@ -28,7 +28,6 @@ let
   # stylish-haskell` (or manually removing the relevant entries from
   # `sources.json`).
   stylish-haskell = import ./nix/stylish-haskell.nix { inherit pkgs; };
-  hls = import ./nix/hls.nix { inherit pkgs; };
 
   # This provides a development environment that can be used with nix-shell or
   # lorri. See https://input-output-hk.github.io/haskell.nix/user-guide/development/
@@ -38,8 +37,7 @@ let
   shell = ouroborosNetworkHaskellPackages.shellFor {
     name = "cabal-dev-shell";
 
-    packages = ps: lib.attrValues (haskell-nix.haskellLib.selectProjectPackages ps)
-      ++ [ ps.cardano-crypto-class ];
+    packages = ps: lib.attrValues (haskell-nix.haskellLib.selectProjectPackages ps);
 
     # These programs will be available inside the nix-shell.
     buildInputs = [
@@ -48,9 +46,6 @@ let
       pkgconfig
       nixpkgs-fmt
       stylish-haskell
-      hls.hls
-      hls.hls-wrapper
-      hls.implicit-hie
     ];
 
     tools = {
@@ -58,6 +53,7 @@ let
       hasktags = "0.71.2";
       # https://hackage.haskell.org/package/graphmod
       graphmod = "1.4.4";
+      haskell-language-server = "1.2.0.0";
       # todo: add back the build tools which are actually necessary
       # hlint = "...";
     };

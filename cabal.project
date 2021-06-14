@@ -1,4 +1,4 @@
-index-state: 2021-02-15T00:00:00Z
+index-state: 2021-07-19T00:00:00Z
 
 packages: ./typed-protocols
           ./typed-protocols-examples
@@ -30,6 +30,7 @@ constraints:
   , bimap >= 0.4.0
   , ListLike >= 4.7.3
   , witherable >= 0.4
+  , Win32 == 2.6.2.0
 
 package Win32-network
   tests: True
