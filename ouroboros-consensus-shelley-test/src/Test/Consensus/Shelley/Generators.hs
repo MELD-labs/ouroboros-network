@@ -14,6 +14,12 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 module Test.Consensus.Shelley.Generators (SomeResult (..)) where
 
+import           Cardano.Slotting.EpochInfo
+
+import           Cardano.Ledger.Era
+
+import           Test.Shelley.Spec.Ledger.Generator.EraGen
+
 import           Ouroboros.Network.Block (mkSerialised)
 
 import           Ouroboros.Consensus.Block
@@ -151,6 +157,42 @@ instance Arbitrary ShelleyNodeToClientVersion where
 instance ShelleyBasedEra era
       => Arbitrary (SomeSecond (NestedCtxt f) (ShelleyBlock era)) where
   arbitrary = return (SomeSecond indexIsTrivial)
+
+{-------------------------------------------------------------------------------
+  Generators for shelley ledger config
+-------------------------------------------------------------------------------}
+
+instance ( Mock (Crypto era)
+         , EraGen era
+         , Arbitrary (TranslationContext era)
+         ) => Arbitrary (ShelleyLedgerConfig era) where
+  arbitrary = ShelleyLedgerConfig
+    <$> arbitrary
+    <*> arbitrary
+    <*> arbitrary
+
+instance ( Mock (Crypto era)
+         , EraGen era
+         ) => Arbitrary (CompactGenesis era) where
+  arbitrary = compactGenesis <$> arbitrary
+
+instance Arbitrary SL.Globals where
+  arbitrary = SL.Globals
+    <$> arbitrary
+    <*> arbitrary
+    <*> arbitrary
+    <*> arbitrary
+    <*> arbitrary
+    <*> arbitrary
+    <*> arbitrary
+    <*> arbitrary
+    <*> arbitrary
+    <*> arbitrary
+    <*> arbitrary
+    <*> arbitrary
+
+instance Monad m => Arbitrary (EpochInfo m) where
+  arbitrary = fixedEpochInfo <$> arbitrary <*> arbitrary
 
 {-------------------------------------------------------------------------------
   Generators for cardano-ledger-specs
