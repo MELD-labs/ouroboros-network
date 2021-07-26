@@ -38,7 +38,9 @@ module Control.Monad.IOSim.Internal (
   ThreadId,
   ThreadLabel,
   Labelled (..),
+  -- * Simulation trace
   Trace,
+  ppTrace,
   Octopus (Trace, TraceMainReturn, TraceMainException, TraceDeadlock),
   EventCtx (..),
   Value (..),
@@ -53,7 +55,7 @@ import           Data.Dynamic (Dynamic, toDyn)
 import           Data.Foldable (traverse_)
 import           Data.Function (on)
 import qualified Data.List as List
-import           Data.List.Octopus (Octopus (..))
+import           Data.List.Octopus (Octopus (..), ppOctopus)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.OrdPSQ (OrdPSQ)
@@ -598,6 +600,9 @@ data EventCtx = EventCtx {
     ecThreadLabel :: !(Maybe ThreadLabel),
     ecTraceEvent  :: !TraceEvent
   }
+  deriving Generic
+  deriving Show via Quiet EventCtx
+
 
 data Value a
     = MainReturn    !Time a             ![Labelled ThreadId]
@@ -607,6 +612,11 @@ data Value a
 
 
 type Trace a = Octopus (Value a) EventCtx
+
+-- | Pretty print simulation trace.
+--
+ppTrace :: Show a => Trace a -> String
+ppTrace = ppOctopus show show
 
 pattern Trace :: Time -> ThreadId -> Maybe ThreadLabel -> TraceEvent -> Trace a
               -> Trace a

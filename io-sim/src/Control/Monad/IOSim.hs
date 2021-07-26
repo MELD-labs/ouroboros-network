@@ -20,7 +20,9 @@ module Control.Monad.IOSim (
   unshareClock,
   -- * Simulation trace
   Trace,
+  ppTrace,
   Octopus (Trace, TraceMainReturn, TraceMainException, TraceDeadlock),
+  ppOctopus,
   Value(..),
   EventCtx(..),
   TraceEvent(..),
