@@ -30,6 +30,7 @@ constraints:
   , bimap >= 0.4.0
   , ListLike >= 4.7.3
   , witherable >= 0.4
+  , Win32 == 2.8.5.0
 
 package Win32-network
   tests: True
