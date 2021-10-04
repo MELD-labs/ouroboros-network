@@ -84,7 +84,8 @@ import qualified Cardano.Ledger.Era as Core
 import qualified Cardano.Ledger.Shelley.API as SL
 import qualified Control.State.Transition.Extended as STS
 
-import qualified Cardano.Ledger.Shelley.Rules.Chain as SL (PredicateFailure)
+import           Cardano.Ledger.Chain (ChainPredicateFailure)
+import           Cardano.Protocol.TPraos.BHeader (makeHeaderView)
 
 import           Ouroboros.Consensus.Shelley.Eras (EraCrypto)
 import           Ouroboros.Consensus.Shelley.Ledger.Block
@@ -331,13 +332,16 @@ instance ShelleyBasedEra era
             }
 
       -- Apply the BBODY transition using the ticked state
-      appBlk =
+      appBlk globals state (SL.Block' h txs _) =
         SL.applyBlockOpts
           STS.ApplySTSOpts {
               asoAssertions = STS.globalAssertionPolicy
             , asoValidation = STS.ValidateAll
             , asoEvents     = STS.EPReturn
             }
+          globals
+          state
+          (makeHeaderView h, txs)
 
   reapplyBlockLedgerResult =
       runIdentity ..: applyHelper (swizzle ..: reappBlk)
@@ -352,13 +356,16 @@ instance ShelleyBasedEra era
             }
 
       -- Reapply the BBODY transition using the ticked state
-      reappBlk =
+      reappBlk globals state (SL.Block' h txs _) =
         SL.applyBlockOpts
           STS.ApplySTSOpts {
                   asoAssertions = STS.AssertionsOff
                 , asoValidation = STS.ValidateNone
                 , asoEvents     = STS.EPReturn
                 }
+          globals
+          state
+          (makeHeaderView h, txs)
 
 data ShelleyReapplyException =
   forall era. Show (SL.BlockTransitionError era)
@@ -482,10 +489,10 @@ instance ShelleyBasedEra era => BasicEnvelopeValidation (ShelleyBlock era) where
 
 instance ShelleyBasedEra era => ValidateEnvelope (ShelleyBlock era) where
   type OtherHeaderEnvelopeError (ShelleyBlock era) =
-    SL.PredicateFailure (SL.CHAIN era)
+    ChainPredicateFailure era
 
   additionalEnvelopeChecks cfg (TickedPraosLedgerView ledgerView) hdr =
-      SL.chainChecks globals (SL.lvChainChecks ledgerView) (shelleyHeaderRaw hdr)
+      SL.chainChecks globals (SL.lvChainChecks ledgerView) (makeHeaderView (shelleyHeaderRaw hdr))
     where
       globals = shelleyLedgerGlobals (configLedger cfg)
 

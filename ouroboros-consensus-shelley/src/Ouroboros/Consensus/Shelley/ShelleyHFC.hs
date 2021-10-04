@@ -33,6 +33,7 @@ import           Data.Word
 import           GHC.Generics (Generic)
 import           NoThunks.Class (NoThunks)
 
+import           Cardano.Binary (Annotator, FromCBOR)
 import           Cardano.Slotting.EpochInfo (hoistEpochInfo)
 
 import           Ouroboros.Consensus.Block
@@ -49,6 +50,7 @@ import           Ouroboros.Consensus.Ledger.Abstract
 import           Ouroboros.Consensus.Node.NetworkProtocolVersion
 import           Ouroboros.Consensus.TypeFamilyWrappers
 
+import           Cardano.Ledger.Core (Witnesses)
 import qualified Cardano.Ledger.Era as SL
 import qualified Cardano.Ledger.Shelley.API as SL
 
@@ -69,7 +71,7 @@ type ShelleyBlockHFC era = HardForkBlock '[ShelleyBlock era]
   NoHardForks instance
 -------------------------------------------------------------------------------}
 
-instance ShelleyBasedEra era => NoHardForks (ShelleyBlock era) where
+instance (ShelleyBasedEra era, Show (SL.TxSeq era)) => NoHardForks (ShelleyBlock era) where
   getEraParams =
         shelleyEraParamsNeverHardForks
       . shelleyLedgerGenesis
@@ -87,8 +89,14 @@ instance ShelleyBasedEra era => NoHardForks (ShelleyBlock era) where
 -- | Forward to the ShelleyBlock instance. Only supports
 -- 'HardForkNodeToNodeDisabled', which is compatible with nodes running with
 -- 'ShelleyBlock'.
-instance ShelleyBasedEra era
-      => SupportedNetworkProtocolVersion (ShelleyBlockHFC era) where
+instance
+  ( ShelleyBasedEra era
+  , SL.ValidateScript era
+  , FromCBOR (Annotator (SL.TxSeq era))
+  , FromCBOR (Annotator (Witnesses era))
+  , Show (SL.TxSeq era)
+  )
+  => SupportedNetworkProtocolVersion (ShelleyBlockHFC era) where
   supportedNodeToNodeVersions _ =
       Map.map HardForkNodeToNodeDisabled $
       supportedNodeToNodeVersions (Proxy @(ShelleyBlock era))
@@ -106,8 +114,20 @@ instance ShelleyBasedEra era
 -- | Use the default implementations. This means the serialisation of blocks
 -- includes an era wrapper. Each block should do this from the start to be
 -- prepared for future hard forks without having to do any bit twiddling.
-instance ShelleyBasedEra era => SerialiseHFC '[ShelleyBlock era]
-instance ShelleyBasedEra era => SerialiseConstraintsHFC (ShelleyBlock era)
+instance
+  ( ShelleyBasedEra era
+  , SL.ValidateScript era
+  , FromCBOR (Annotator (Witnesses era))
+  , FromCBOR (Annotator (SL.TxSeq era))
+  , Show (SL.TxSeq era)
+  ) => SerialiseHFC '[ShelleyBlock era]
+instance
+  ( ShelleyBasedEra era
+  , SL.ValidateScript era
+  , FromCBOR (Annotator (Witnesses era))
+  , FromCBOR (Annotator (SL.TxSeq era))
+  , Show (SL.TxSeq era)
+  ) => SerialiseConstraintsHFC (ShelleyBlock era)
 
 {-------------------------------------------------------------------------------
   Protocol type definition
@@ -161,7 +181,7 @@ shelleyTransition ShelleyPartialLedgerConfig{..}
     takeAny :: [a] -> Maybe a
     takeAny = listToMaybe
 
-instance ShelleyBasedEra era => SingleEraBlock (ShelleyBlock era) where
+instance (ShelleyBasedEra era, Show (SL.TxSeq era)) => SingleEraBlock (ShelleyBlock era) where
   singleEraTransition pcfg _eraParams _eraStart ledgerState =
       case shelleyTriggerHardFork pcfg of
         TriggerHardForkNever                         -> Nothing

@@ -1,6 +1,8 @@
+{-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE TypeFamilies          #-}
+{-# LANGUAGE UndecidableInstances  #-}
 
 {-# OPTIONS_GHC -Wno-orphans #-}
 module Ouroboros.Consensus.Shelley.Node.Serialisation () where
@@ -9,7 +11,7 @@ import           Control.Exception (Exception, throw)
 import qualified Data.ByteString.Lazy as Lazy
 import           Data.Typeable (Typeable)
 
-import           Cardano.Binary (fromCBOR, toCBOR)
+import           Cardano.Binary (Annotator, FromCBOR, fromCBOR, toCBOR)
 import           Codec.Serialise (decode, encode)
 
 import           Ouroboros.Network.Block (Serialised, unwrapCBORinCBOR,
@@ -22,6 +24,8 @@ import           Ouroboros.Consensus.Node.Run
 import           Ouroboros.Consensus.Node.Serialisation
 import           Ouroboros.Consensus.Storage.Serialisation
 
+import           Cardano.Ledger.Core (Witnesses)
+import qualified Cardano.Ledger.Era as SL (TxSeq, ValidateScript)
 import qualified Cardano.Ledger.Shelley.API as SL
 
 import           Ouroboros.Consensus.Shelley.Eras
@@ -36,11 +40,21 @@ import           Ouroboros.Consensus.Shelley.Protocol
 instance ShelleyBasedEra era => HasBinaryBlockInfo (ShelleyBlock era) where
   getBinaryBlockInfo = shelleyBinaryBlockInfo
 
-instance ShelleyBasedEra era => SerialiseDiskConstraints (ShelleyBlock era)
+instance
+  ( ShelleyBasedEra era
+  , SL.ValidateScript era
+  , FromCBOR (Annotator (Witnesses era))
+  , FromCBOR (Annotator (SL.TxSeq era))
+  ) => SerialiseDiskConstraints (ShelleyBlock era)
 
 instance ShelleyBasedEra era => EncodeDisk (ShelleyBlock era) (ShelleyBlock era) where
   encodeDisk _ = encodeShelleyBlock
-instance ShelleyBasedEra era => DecodeDisk (ShelleyBlock era) (Lazy.ByteString -> ShelleyBlock era) where
+instance
+  ( ShelleyBasedEra era
+  , SL.ValidateScript era
+  , FromCBOR (Annotator (Witnesses era))
+  , FromCBOR (Annotator (SL.TxSeq era))
+  ) => DecodeDisk (ShelleyBlock era) (Lazy.ByteString -> ShelleyBlock era) where
   decodeDisk _ = decodeShelleyBlock
 
 instance ShelleyBasedEra era => EncodeDisk (ShelleyBlock era) (Header (ShelleyBlock era)) where
@@ -69,7 +83,12 @@ instance ShelleyBasedEra era =>  DecodeDisk (ShelleyBlock era) (AnnTip (ShelleyB
   SerialiseNodeToNode
 -------------------------------------------------------------------------------}
 
-instance ShelleyBasedEra era => SerialiseNodeToNodeConstraints (ShelleyBlock era) where
+instance
+  ( ShelleyBasedEra era
+  , SL.ValidateScript era
+  , FromCBOR (Annotator (Witnesses era))
+  , FromCBOR (Annotator (SL.TxSeq era))
+  ) => SerialiseNodeToNodeConstraints (ShelleyBlock era) where
   estimateBlockSize hdr = overhead + hdrSize + bodySize
     where
       -- The maximum block size is 65536, the CBOR-in-CBOR tag for this block
@@ -85,7 +104,12 @@ instance ShelleyBasedEra era => SerialiseNodeToNodeConstraints (ShelleyBlock era
 
 -- | CBOR-in-CBOR for the annotation. This also makes it compatible with the
 -- wrapped ('Serialised') variant.
-instance ShelleyBasedEra era => SerialiseNodeToNode (ShelleyBlock era) (ShelleyBlock era) where
+instance
+  ( ShelleyBasedEra era
+  , SL.ValidateScript era
+  , FromCBOR (Annotator (Witnesses era))
+  , FromCBOR (Annotator (SL.TxSeq era))
+  ) => SerialiseNodeToNode (ShelleyBlock era) (ShelleyBlock era) where
   encodeNodeToNode _ _ = wrapCBORinCBOR   encodeShelleyBlock
   decodeNodeToNode _ _ = unwrapCBORinCBOR decodeShelleyBlock
 
@@ -128,11 +152,21 @@ data ShelleyEncoderException era =
 
 instance Typeable era => Exception (ShelleyEncoderException era)
 
-instance ShelleyBasedEra era => SerialiseNodeToClientConstraints (ShelleyBlock era)
+instance
+  ( ShelleyBasedEra era
+  , SL.ValidateScript era
+  , FromCBOR (Annotator (Witnesses era))
+  , FromCBOR (Annotator (SL.TxSeq era))
+  ) => SerialiseNodeToClientConstraints (ShelleyBlock era)
 
 -- | CBOR-in-CBOR for the annotation. This also makes it compatible with the
 -- wrapped ('Serialised') variant.
-instance ShelleyBasedEra era => SerialiseNodeToClient (ShelleyBlock era) (ShelleyBlock era) where
+instance
+  ( ShelleyBasedEra era
+  , SL.ValidateScript era
+  , FromCBOR (Annotator (Witnesses era))
+  , FromCBOR (Annotator (SL.TxSeq era))
+  ) => SerialiseNodeToClient (ShelleyBlock era) (ShelleyBlock era) where
   encodeNodeToClient _ _ = wrapCBORinCBOR   encodeShelleyBlock
   decodeNodeToClient _ _ = unwrapCBORinCBOR decodeShelleyBlock
 

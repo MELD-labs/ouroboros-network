@@ -2,6 +2,7 @@
 {-# LANGUAGE DeriveGeneric              #-}
 {-# LANGUAGE DerivingStrategies         #-}
 {-# LANGUAGE DerivingVia                #-}
+{-# LANGUAGE FlexibleContexts           #-}
 {-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE GADTs                      #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -12,6 +13,8 @@
 {-# LANGUAGE StandaloneDeriving         #-}
 {-# LANGUAGE TypeApplications           #-}
 {-# LANGUAGE TypeFamilies               #-}
+{-# LANGUAGE UndecidableInstances       #-}
+
 module Ouroboros.Consensus.Shelley.Ledger.Block (
     GetHeader (..)
   , Header (..)
@@ -52,7 +55,8 @@ import           Ouroboros.Consensus.Util (ShowProxy (..), hashFromBytesShortE)
 import           Ouroboros.Consensus.Util.Condense
 
 import           Cardano.Ledger.Crypto (Crypto, HASH)
-import qualified Cardano.Ledger.Era as SL (hashTxSeq)
+import           Cardano.Ledger.Core (Witnesses)
+import qualified Cardano.Ledger.Era as SL (TxSeq, ValidateScript, hashTxSeq)
 import qualified Cardano.Ledger.Shelley.API as SL
 
 import           Ouroboros.Consensus.Shelley.Eras
@@ -94,8 +98,8 @@ data ShelleyBlock era = ShelleyBlock {
     , shelleyBlockHeaderHash :: !(ShelleyHash (EraCrypto era))
     }
 
-deriving instance ShelleyBasedEra era => Show (ShelleyBlock era)
-deriving instance ShelleyBasedEra era => Eq   (ShelleyBlock era)
+deriving instance (ShelleyBasedEra era, Show (SL.TxSeq era)) => Show (ShelleyBlock era)
+deriving instance (ShelleyBasedEra era, Eq (SL.TxSeq era))   => Eq   (ShelleyBlock era)
 
 instance Typeable era => ShowProxy (ShelleyBlock era) where
 
@@ -207,7 +211,12 @@ instance ShelleyBasedEra era => ToCBOR (ShelleyBlock era) where
   -- Don't encode the header hash, we recompute it during deserialisation
   toCBOR = toCBOR . shelleyBlockRaw
 
-instance ShelleyBasedEra era => FromCBOR (Annotator (ShelleyBlock era)) where
+instance
+  ( ShelleyBasedEra era
+  , SL.ValidateScript era
+  , FromCBOR (Annotator (Witnesses era))
+  , FromCBOR (Annotator (SL.TxSeq era))
+  ) => FromCBOR (Annotator (ShelleyBlock era)) where
   fromCBOR = fmap mkShelleyBlock <$> fromCBOR
 
 instance ShelleyBasedEra era => ToCBOR (Header (ShelleyBlock era)) where
@@ -220,7 +229,12 @@ instance ShelleyBasedEra era => FromCBOR (Annotator (Header (ShelleyBlock era)))
 encodeShelleyBlock :: ShelleyBasedEra era => ShelleyBlock era -> Encoding
 encodeShelleyBlock = toCBOR
 
-decodeShelleyBlock :: ShelleyBasedEra era => Decoder s (Lazy.ByteString -> ShelleyBlock era)
+decodeShelleyBlock ::
+  ( ShelleyBasedEra era
+  , SL.ValidateScript era
+  , FromCBOR (Annotator (Witnesses era))
+  , FromCBOR (Annotator (SL.TxSeq era))
+  ) => Decoder s (Lazy.ByteString -> ShelleyBlock era)
 decodeShelleyBlock = (. Full) . runAnnotator <$> fromCBOR
 
 shelleyBinaryBlockInfo :: ShelleyBasedEra era => ShelleyBlock era -> BinaryBlockInfo
@@ -242,7 +256,7 @@ decodeShelleyHeader = (. Full) . runAnnotator <$> fromCBOR
   Condense
 -------------------------------------------------------------------------------}
 
-instance ShelleyBasedEra era => Condense (ShelleyBlock era) where
+instance (ShelleyBasedEra era, Show (SL.TxSeq era)) => Condense (ShelleyBlock era) where
   condense = show . shelleyBlockRaw
 
 instance ShelleyBasedEra era => Condense (Header (ShelleyBlock era)) where

@@ -51,6 +51,7 @@ import           Data.Text (Text)
 import qualified Data.Text as Text
 import           GHC.Stack (HasCallStack)
 
+import           Cardano.Binary (Annotator, FromCBOR)
 import qualified Cardano.Crypto.VRF as VRF
 import           Cardano.Slotting.EpochInfo
 import           Cardano.Slotting.Time (mkSlotLength)
@@ -72,6 +73,7 @@ import           Ouroboros.Consensus.Storage.ImmutableDB (simpleChunkInfo)
 import           Ouroboros.Consensus.Util.Assert
 import           Ouroboros.Consensus.Util.IOLike
 
+import           Cardano.Ledger.Core (Witnesses)
 import qualified Cardano.Ledger.Era as Core
 import qualified Cardano.Ledger.Shelley.API as SL
 import qualified Cardano.Ledger.Shelley.Constraints as SL (makeTxOut)
@@ -436,7 +438,12 @@ instance ShelleyBasedEra era => BlockSupportsMetrics (ShelleyBlock era) where
          SelfIssued    -> IsSelfIssued
          NotSelfIssued -> IsNotSelfIssued
 
-instance ShelleyBasedEra era => RunNode (ShelleyBlock era)
+instance
+  ( ShelleyBasedEra era
+  , Core.ValidateScript era
+  , FromCBOR (Annotator (Witnesses era))
+  , FromCBOR (Annotator (Core.TxSeq era))
+  ) => RunNode (ShelleyBlock era)
 
 {-------------------------------------------------------------------------------
   Register genesis staking

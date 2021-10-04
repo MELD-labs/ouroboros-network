@@ -1,8 +1,12 @@
-{-# LANGUAGE FlexibleContexts  #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE TypeFamilies      #-}
+{-# LANGUAGE FlexibleContexts     #-}
+{-# LANGUAGE FlexibleInstances    #-}
+{-# LANGUAGE TypeFamilies         #-}
+{-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
+
 module Ouroboros.Consensus.Cardano.Condense () where
+
+import qualified Cardano.Ledger.Era as SL
 
 import           Ouroboros.Consensus.HardFork.Combinator.Condense
 
@@ -21,6 +25,6 @@ import           Ouroboros.Consensus.Cardano.CanHardFork
 
 instance CondenseConstraints ByronBlock
 
-instance ShelleyBasedEra era => CondenseConstraints (ShelleyBlock era)
+instance (ShelleyBasedEra era, Show (SL.TxSeq era)) => CondenseConstraints (ShelleyBlock era)
 
 instance CardanoHardForkConstraints c => CondenseConstraints (CardanoBlock c)
